@@ -1,0 +1,14 @@
+[Unit]
+Description=Automatic restart and mangement script for virtual machines.
+After=network.target
+StartLimitIntervalSec=5
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/bin/vm-restart-script
+
+[Install]
+WantedBy=multi-user.target
