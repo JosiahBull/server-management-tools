@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Small install script to install the management script more conviently.
+# Author: Josiah Bull 2021
+# Script to install the virtual machine management script more conviently.
 
 # Check we are sudo https://stackoverflow.com/questions/18215973/how-to-check-if-running-as-root-in-a-bash-script
 if [ "$EUID" -ne 0 ]
