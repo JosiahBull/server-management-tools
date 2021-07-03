@@ -16,6 +16,6 @@ systemctl disable virtual-machine-manager.service
 rm  /bin/vm-restart-script
 rm /etc/systemd/system/virtual-machine-manager.service
 
-#Reset things on advice of https://superuser.com/questions/513159/how-to-remove-systemd-services
+#Reset systemctl on advice of https://superuser.com/questions/513159/how-to-remove-systemd-services
 systemctl daemon-reload
 systemctl reset-failed
