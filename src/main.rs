@@ -21,13 +21,12 @@ fn virtual_machine_online(vm: &str) -> Result<bool, MachineError> {
 
 async fn get_mining_status(address: String, client: &reqwest::Client, cfg: &Config) -> Result<bool, ServerError> {
     println!("Collecting status of machine!");
-    let body = client.get(address)
+    let data: APIResponse = client.get(address)
     .send()
     .await?
-    .text()
+    .json()
     .await?;
     
-    let data: APIResponse = serde_json::from_str(&body)?;
     if data.workers.is_empty() {
         return Err(ServerError::ParseError("No workers exist for this client!".into()));
     }
@@ -101,7 +100,7 @@ fn restart_virtual_machine(cfg: &Config) -> Result<(), MachineError> {
     Ok(())
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let start_time = Local::now();
     println!("VM Monitoring script started on {}.", start_time.format("%a %b %e %T %Y"));

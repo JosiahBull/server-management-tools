@@ -7,6 +7,9 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+#Stop the service if it exists
+systemctl stop virtual-machine-manager.service
+
 # Copy the binary to the correct location
 cp ../target/release/vm-restart-script /bin/vm-restart-script
 

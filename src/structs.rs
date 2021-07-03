@@ -39,19 +39,12 @@ impl ::std::default::Default for Config {
 #[derive(Debug)]
 pub enum ServerError {
     HttpError(reqwest::Error),
-    SerdeParseError(serde_json::Error),
     ParseError(String),
 }
 
 impl From<reqwest::Error> for ServerError {
     fn from(error: reqwest::Error) -> Self {
         ServerError::HttpError(error)
-    }
-}
-
-impl From<serde_json::Error> for ServerError {
-    fn from(error: serde_json::Error) -> Self {
-        ServerError::SerdeParseError(error)
     }
 }
 
