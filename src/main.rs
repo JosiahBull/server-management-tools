@@ -7,21 +7,9 @@ use chrono::prelude::*;
 use std::{thread, time};
 use std::process::Command;
 use structs::*;
+use dirs;
 
-///How often to ping F2Pool for latest mining time
-const CHECK_TIME_SECONDS: u64 = 120;
-///How long a machine has to be offline for before we restart it
-const OFFLINE_THRESHOLD_MINUTES: i64 = 20;
-///The name of the account you are using to mine on F2Pool
-const MINING_ACCOUNT_NAME: &str = "";
-///Name of mining machine to check on F2Pool
-const MINING_RIG_NAME: &str = "";
-///Name of virtual machine to restart
-const VIRTUAL_MACHINE_NAME: &str = "";
-///How long to wait for a virtual machine to shutdown gracefully
-const SHUTDOWN_TIME_SECONDS: u64 = 20;
-///How long to wait for a virtual machine to start correctly
-const VIRTUAL_MACHINE_RESTART_TIME_SECONDS: u64 = 180;
+const CONFIG_NAME: &str = "virtual-machine-mangement";
 
 fn virtual_machine_online(vm: &str) -> Result<bool, MachineError> {
     let online_status = match Command::new("bash").args(["-c", &format!("virsh list --all | grep \"{}\" | awk '{{print $3}}'", vm)]).output() {
@@ -31,7 +19,8 @@ fn virtual_machine_online(vm: &str) -> Result<bool, MachineError> {
     Ok(online_status == "running\n".as_bytes())
 }
 
-async fn get_mining_status(address: String, client: &reqwest::Client, vm: &str) -> Result<bool, ServerError> {
+async fn get_mining_status(address: String, client: &reqwest::Client, cfg: &Config) -> Result<bool, ServerError> {
+    println!("Collecting status of machine!");
     let body = client.get(address)
     .send()
     .await?
@@ -51,7 +40,7 @@ async fn get_mining_status(address: String, client: &reqwest::Client, vm: &str) 
             Some(f) => f.to_owned(),
             None => return Err(ServerError::ParseError("Failed to parse worker name as string.".into())),
         };
-        if name == vm {
+        if name == cfg.mining_account_name {
             if !worker[6].is_string() {
                 return Err(ServerError::ParseError("Worker last submitted share should be a string!".into()));
             }
@@ -68,7 +57,8 @@ async fn get_mining_status(address: String, client: &reqwest::Client, vm: &str) 
             if time_diff < chrono::Duration::minutes(0) {
                 return Err(ServerError::ParseError("Somehow we submitted the most recent share in the future?".into()));
             }
-            if time_diff > chrono::Duration::minutes(OFFLINE_THRESHOLD_MINUTES) {
+            if time_diff > chrono::Duration::minutes(cfg.offline_threshold_minutes as i64) {
+                println!("Machine is offline!");
                 return Ok(false);
             }
             return Ok(true);
@@ -78,21 +68,21 @@ async fn get_mining_status(address: String, client: &reqwest::Client, vm: &str) 
     Ok(false) //Failed to find the mining server
 }
 
-fn restart_virtual_machine(vm: &str) -> Result<(), MachineError> {
+fn restart_virtual_machine(cfg: &Config) -> Result<(), MachineError> {
     //Shutdown VM
-    if virtual_machine_online(vm)? {
+    if virtual_machine_online(&cfg.virtual_machine_name)? {
         println!("Shutting down vm");
-        match Command::new("bash").args(["-c", "virsh shutdown test-vm"]).output() {
+        match Command::new("bash").args(["-c".to_owned(), format!("virsh shutdown {}", cfg.virtual_machine_name)]).output() {
             Ok(_) => (),
             Err(e) => return Err(MachineError::CommandError(e.to_string())),
         };
         //Wait a given time to ensure proper shutdown.
-        thread::sleep(time::Duration::from_secs(SHUTDOWN_TIME_SECONDS));
+        thread::sleep(time::Duration::from_secs(cfg.shutdown_time_seconds));
 
         //If not shutdown after this time, force a shutdown as the VM is not responding
-        if virtual_machine_online(vm)? {
+        if virtual_machine_online(&cfg.virtual_machine_name)? {
             eprintln!("Force shutting down VM");
-            match Command::new("bash").args(["-c", "virsh destroy test-vm"]).output() {
+            match Command::new("bash").args(["-c".to_owned(), format!("virsh destroy {}", cfg.virtual_machine_name)]).output() {
                 Ok(_) => (),
                 Err(e) => return Err(MachineError::CommandError(e.to_string())),
             };
@@ -100,12 +90,13 @@ fn restart_virtual_machine(vm: &str) -> Result<(), MachineError> {
         }
     }
     //Restart VM
-    match Command::new("bash").args(["-c", "virsh start test-vm"]).output() {
-        Ok(_) => (),
+    println!("Starting virtual machine!");
+    match Command::new("bash").args(["-c".to_owned(), format!("virsh start {}", cfg.virtual_machine_name)]).output() {
+        Ok(f) => println!("Machine started with output: {}", String::from_utf8(f.stdout).unwrap_or("FAILED TO PARSE OUTPUT".into())),
         Err(e) => return Err(MachineError::CommandError(e.to_string())),
     };
 
-    thread::sleep(time::Duration::from_secs(VIRTUAL_MACHINE_RESTART_TIME_SECONDS));
+    thread::sleep(time::Duration::from_secs(cfg.virtual_machine_restart_time_seconds));
 
     Ok(())
 }
@@ -114,14 +105,24 @@ fn restart_virtual_machine(vm: &str) -> Result<(), MachineError> {
 async fn main() {
     let start_time = Local::now();
     println!("VM Monitoring script started on {}.", start_time.format("%a %b %e %T %Y"));
+    println!("Loading config file...");
+    let cfg: Config = match confy::load("virtual-machine-mangement") {
+        Ok(f) => f,
+        Err(e) => panic!("Failed to load config file! Edit the config file at {}/{}. \nError: {}", dirs::config_dir().unwrap_or("ERROR NO CONFIG".into()).to_str().to_owned().unwrap_or("ERROR NO CONFIG"), CONFIG_NAME, e),
+    };
+    if cfg.mining_rig_name == "" {
+        panic!("Failed to load config correctly! Please edit the config file at: {}/{}", dirs::config_dir().unwrap_or("ERROR NO CONFIG".into()).to_str().to_owned().unwrap_or("ERROR NO CONFIG"), CONFIG_NAME);
+    }
+    println!("Loaded config!");
 
     let client = reqwest::Client::new();
 
     loop {
-        match get_mining_status(format!("https://api.f2pool.com/eth/{}", MINING_ACCOUNT_NAME), &client, MINING_RIG_NAME).await {
+        match get_mining_status(format!("https://api.f2pool.com/eth/{}", &cfg.mining_account_name), &client, &cfg).await {
             Ok(f) => {
                 if !f {
-                    match restart_virtual_machine(VIRTUAL_MACHINE_NAME) {
+                    println!("Attempting to (re)start machine!");
+                    match restart_virtual_machine(&cfg) {
                         Ok(_) => (),
                         Err(e) => eprintln!("An error occured attempting to start the virtual machine! Error: {}", e),
                     }
@@ -130,6 +131,6 @@ async fn main() {
             Err(e) => eprintln!("An error occured attempting to collect the status! Error: {}", e),
         };
 
-        thread::sleep(time::Duration::from_secs(CHECK_TIME_SECONDS));
+        thread::sleep(time::Duration::from_secs(cfg.check_time_seconds));
     }
 }

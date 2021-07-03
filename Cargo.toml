@@ -14,3 +14,4 @@ tokio = { version = "1.7.1", features = ["full"] }
 serde_json="1.0.64"
 serde = { version = "1.0.126", features = ["derive"] }
 serde_derive = "1.0.126"
+dirs="3.0.2"

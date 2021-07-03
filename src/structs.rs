@@ -1,6 +1,40 @@
 //! Error and API response structs
 use serde::{Serialize, Deserialize};
 
+//Config
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Config {
+    ///How often to ping F2Pool for latest mining time
+    pub check_time_seconds: u64,
+    ///How long a machine has to be offline for before we restart it
+    pub offline_threshold_minutes: u64,
+    ///The name of the account you are using to mine on F2Pool
+    pub mining_account_name: String,
+    ///Name of mining machine to check on F2Pool
+    pub mining_rig_name: String,
+    ///Name of virtual machine to restart
+    pub virtual_machine_name: String,
+    ///How long to wait for a virtual machine to shutdown gracefully
+    pub shutdown_time_seconds: u64,
+    ///How long to wait for a virtual machine to start correctly
+    pub virtual_machine_restart_time_seconds: u64,
+}
+
+impl ::std::default::Default for Config {
+    fn default() -> Self {
+        Self {
+            check_time_seconds: 120,
+            offline_threshold_minutes: 20,
+            mining_account_name: "".into(),
+            mining_rig_name: "".into(),
+            virtual_machine_name: "".into(),
+            shutdown_time_seconds: 20,
+            virtual_machine_restart_time_seconds: 180,
+        }
+    }
+}
+
+
 //Error Structs
 #[derive(Debug)]
 pub enum ServerError {
