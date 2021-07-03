@@ -21,3 +21,6 @@ sudo ./install.sh
 Note that this may spit out an error saying that it failed to stop a service, this will not prevent a successful installation.
 
 IMPORTANT NOTE: This program has little-to-no validation of configuration. Make sure you get it right!
+
+# Licensing
+This project is licensed under MIT. This project is currently unmaintained and has been archived.
