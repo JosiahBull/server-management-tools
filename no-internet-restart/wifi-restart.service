@@ -1,0 +1,14 @@
+[Unit]
+Description=Automatic restart script in the event the internet connection fails for more than a set time.
+After=network.target
+StartLimitIntervalSec=5
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/bin/no-internet-restart
+
+[Install]
+WantedBy=multi-user.target

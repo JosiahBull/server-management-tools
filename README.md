@@ -1,3 +1,25 @@
+# Summary
+This repo contains smaller rust cli projects that I use to remotely manage servers.
+# No Internet Restart
+## Description
+A small rust CLI tool which automatically restarts the system if it doesn't have a connection to the internet in a configurable amount of time.
+
+## Installation
+```bash
+git clone https://github.com/JosiahBull/server-management-tools.git
+cd server-management-tools/no-internet-restart
+
+#If you don't want the default config edit the consts
+nano ./src/main.rs
+
+#build
+sudo cargo run --release
+
+chmod +x install.sh
+sudo ./install.sh
+
+```
+
 # Virtual Machine Manager
 ## Description
 A small rust CLI tool to allow the automatic restarting of virtual machines if they become unproductive.
@@ -14,7 +36,6 @@ sudo cargo run --release
 #e.g.:
 nano ~/.config/virtual-machine-management/virtual-machine-management.toml
 
-cd install
 chmod +x install.sh
 sudo ./install.sh
 ```
