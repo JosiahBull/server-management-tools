@@ -39,7 +39,7 @@ async fn get_mining_status(address: String, client: &reqwest::Client, cfg: &Conf
             Some(f) => f.to_owned(),
             None => return Err(ServerError::ParseError("Failed to parse worker name as string.".into())),
         };
-        if name == cfg.mining_account_name {
+        if name == cfg.mining_rig_name {
             if !worker[6].is_string() {
                 return Err(ServerError::ParseError("Worker last submitted share should be a string!".into()));
             }
@@ -63,7 +63,7 @@ async fn get_mining_status(address: String, client: &reqwest::Client, cfg: &Conf
             return Ok(true);
         }
     }
-
+    println!("getting to here is a problem!");
     Ok(false) //Failed to find the mining server
 }
 
