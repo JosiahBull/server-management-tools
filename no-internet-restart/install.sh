@@ -17,7 +17,7 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-cargo build --release
+# cargo build --release
 
 #Stop the service if it exists
 if service_exists wifi-restart; then

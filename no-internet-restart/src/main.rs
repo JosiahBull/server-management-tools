@@ -1,8 +1,7 @@
 //Author: Josiah Bull, Copyright 2021
 //! A CLI applet to monitor the status of the internet connection on the current system, and reboot it if/when needed.
 
-use std::{thread, time, path, fs, process::Command, io::prelude::*};
-use dirs;
+use std::{thread, time, path, fs, process::Command};
 
 const PING_ADDRESS: &str = "https://www.google.com/";
 const CHECK_TIME_MINUTES: u16 = 15;
@@ -81,6 +80,7 @@ mod boot_record_tests {
 
 fn restart() -> Result<(), String> {
     //Restart machine
+    println!("Woah dude, we restarted the machine!");
     match Command::new("bash").args(["-c", "shutdown -r +1 'No internet.'"]).output() {
         Ok(_) => (),
         Err(e) => return Err(format!("{}", e)),
@@ -90,19 +90,14 @@ fn restart() -> Result<(), String> {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let mut config_path: path::PathBuf = dirs::config_dir().expect("Failed to find config directory!");
-    config_path.push(PROGRAM_NAME);
-    config_path.push("boot_record");
-    config_path.set_extension(".conf");
-
+    let config_path: path::PathBuf = path::PathBuf::from(format!("/tmp/{}_boot_record.conf", PROGRAM_NAME));
     let mut count: u8 = 0;
     loop {
         //Placed at top to prevent a boot loop (i.e. you will always have at least CHECK_TIME_MINUTES to shutdown this service)
         thread::sleep(time::Duration::from_secs(CHECK_TIME_MINUTES as u64 * 60));
-
         if let Err(e) = heartbeat(PING_ADDRESS).await {
             eprintln!("Failed to acquire a heartbeat! Count: {} Error: {}", count, e);
-            count = count + 1;
+            count += 1;
         } else {
             count = 0;
             if check_boot_record(&config_path) {
