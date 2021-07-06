@@ -16,11 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build VMM
-      run: cargo build --manifest-path=./virtual-machine-manager/Cargo.toml --verbose
-    - name: Run tests VMM
-      run: cargo test --manifest-path=./virtual-machine-manager/Cargo.toml --verbose
-    - name: Build NIR
+    - name: Build
       run: cargo build --manifest-path=./no-internet-restart/Cargo.toml --verbose
-    - name: Run tests NIR
+    - name: Run tests
       run: cargo test --manifest-path=./no-internet-restart/Cargo.toml --verbose
