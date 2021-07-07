@@ -7,9 +7,6 @@ use chrono::prelude::*;
 use std::{thread, time};
 use std::process::Command;
 use structs::*;
-use dirs;
-
-const CONFIG_NAME: &str = "virtual-machine-mangement";
 
 fn virtual_machine_online(vm: &str) -> Result<bool, MachineError> {
     let online_status = match Command::new("bash").args(["-c", &format!("virsh list --all | grep \"{}\" | awk '{{print $3}}'", vm)]).output() {
@@ -63,7 +60,6 @@ async fn get_mining_status(address: String, client: &reqwest::Client, cfg: &Conf
             return Ok(true);
         }
     }
-    println!("getting to here is a problem!");
     Ok(false) //Failed to find the mining server
 }
 
@@ -91,7 +87,17 @@ fn restart_virtual_machine(cfg: &Config) -> Result<(), MachineError> {
     //Restart VM
     println!("Starting virtual machine!");
     match Command::new("bash").args(["-c".to_owned(), format!("virsh start {}", cfg.virtual_machine_name)]).output() {
-        Ok(f) => println!("Machine started with output: {}", String::from_utf8(f.stdout).unwrap_or("FAILED TO PARSE OUTPUT".into())),
+        Ok(f) => {
+            let stdout: String = String::from_utf8(f.stdout).unwrap_or("FAILED TO PARSE OUTPUT".into());
+            let stderr: String = String::from_utf8(f.stderr).unwrap_or("FAILED TO PARSE OUTPUT".into());
+
+            if stdout.len() > 3 {
+                println!("Machine started with output: {}", stdout);
+            }
+            if stderr.len() > 3 {
+                println!("Machine produced Errors: {}", stderr);
+            }
+        },
         Err(e) => return Err(MachineError::CommandError(e.to_string())),
     };
 
@@ -105,12 +111,12 @@ async fn main() {
     let start_time = Local::now();
     println!("VM Monitoring script started on {}.", start_time.format("%a %b %e %T %Y"));
     println!("Loading config file...");
-    let cfg: Config = match confy::load("virtual-machine-mangement") {
+    let cfg: Config = match confy::load_path("/opt/secure-user/virtual-machine-mangement.conf") {
         Ok(f) => f,
-        Err(e) => panic!("Failed to load config file! Edit the config file at {}/{}. \nError: {}", dirs::config_dir().unwrap_or("ERROR NO CONFIG".into()).to_str().to_owned().unwrap_or("ERROR NO CONFIG"), CONFIG_NAME, e),
+        Err(e) => panic!("Failed to load config file! Edit the config file at {}. \nError: {}", "/opt/secure-user/virtual-machine-mangement.conf", e),
     };
     if cfg.mining_rig_name == "" {
-        panic!("Failed to load config correctly! Please edit the config file at: {}/{}", dirs::config_dir().unwrap_or("ERROR NO CONFIG".into()).to_str().to_owned().unwrap_or("ERROR NO CONFIG"), CONFIG_NAME);
+        panic!("Failed to load config correctly! Please edit the config file at: {}", "/opt/secure-user/virtual-machine-mangement.conf");
     }
     println!("Loaded config!");
 

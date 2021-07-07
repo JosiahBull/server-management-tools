@@ -13,8 +13,18 @@ systemctl stop virtual-machine-manager.service
 systemctl disable virtual-machine-manager.service
 
 # Remove files
-rm  /bin/vm-restart-script
+rm /opt/secure-user/vm-restart-script
 rm /etc/systemd/system/virtual-machine-manager.service
+
+#Remove User and Group
+#N.b. we expect to write other applications that may re-use this user, so lets ask if the user really wants to remove him.
+read -p "Do you want to remove the secure-user? Y/N" -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+    userdel secure-user -r
+    groupdel secure-user
+fi
 
 #Reset systemctl on advice of https://superuser.com/questions/513159/how-to-remove-systemd-services
 systemctl daemon-reload
