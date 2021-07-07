@@ -1,7 +1,7 @@
 //Author: Josiah Bull, Copyright 2021
 //! A CLI applet to monitor the status of the internet connection on the current system, and reboot it if/when needed.
 
-use std::{thread, time, path, fs, process::Command, io::prelude::*};
+use std::{thread, time, path, fs, process::Command};
 use dirs;
 
 const PING_ADDRESS: &str = "https://www.google.com/";
@@ -81,6 +81,7 @@ mod boot_record_tests {
 
 fn restart() -> Result<(), String> {
     //Restart machine
+    println!("Restart machine!");
     match Command::new("bash").args(["-c", "shutdown -r +1 'No internet.'"]).output() {
         Ok(_) => (),
         Err(e) => return Err(format!("{}", e)),
@@ -90,19 +91,16 @@ fn restart() -> Result<(), String> {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let mut config_path: path::PathBuf = dirs::config_dir().expect("Failed to find config directory!");
-    config_path.push(PROGRAM_NAME);
-    config_path.push("boot_record");
-    config_path.set_extension(".conf");
-
+    let config_path: path::PathBuf = path::PathBuf::from(format!("{}/{}_boot_record.record", dirs::home_dir().unwrap_or(path::PathBuf::from("/opt/secure-user")).into_os_string().into_string().unwrap_or("/opt/secure-user".into()), PROGRAM_NAME));
     let mut count: u8 = 0;
+    println!("Using home path: {:?}", config_path);
     loop {
         //Placed at top to prevent a boot loop (i.e. you will always have at least CHECK_TIME_MINUTES to shutdown this service)
         thread::sleep(time::Duration::from_secs(CHECK_TIME_MINUTES as u64 * 60));
-
+        println!("Checking connection....");
         if let Err(e) = heartbeat(PING_ADDRESS).await {
             eprintln!("Failed to acquire a heartbeat! Count: {} Error: {}", count, e);
-            count = count + 1;
+            count += 1;
         } else {
             count = 0;
             if check_boot_record(&config_path) {

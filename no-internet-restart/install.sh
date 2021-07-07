@@ -17,7 +17,22 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
-cargo build --release
+#Check the release file has been built, and exit if it hasn't.
+if [ ! -f ./target/release/no-internet-restart ]; then
+    echo "Cannot find release, don't forget to cargo build --release before running this script!"
+    exit
+fi
+
+mkdir -p /opt/secure-user
+
+#Create group secure-user if not exist
+[ $(getent group secure-user) ] || groupadd secure-user
+
+#Create user if not exist
+id -u secure-user &>/dev/null || useradd --system --shell /usr/sbin/nologin --home /opt/secure-user -g secure-user secure-user
+
+#Set permissions of home folder
+chown secure-user:secure-user /opt/secure-user
 
 #Stop the service if it exists
 if service_exists wifi-restart; then
@@ -27,7 +42,7 @@ fi
 
 
 # Copy the binary to the correct location
-cp ./target/release/no-internet-restart /bin/no-internet-restart
+cp ./target/release/no-internet-restart /opt/secure-user
 
 # Create the service script
 cp ./wifi-restart.service /etc/systemd/system/wifi-restart.service
