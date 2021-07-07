@@ -7,8 +7,19 @@ StartLimitIntervalSec=5
 Type=simple
 Restart=always
 RestartSec=1
-User=root
-ExecStart=/bin/no-internet-restart
+
+# Change this to a non-root user (for obvious reasons!)
+User=secure-user
+Group=secure-user
+
+PrivateUsers=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+ExecStart=/opt/secure-user/no-internet-restart
 
 [Install]
 WantedBy=multi-user.target
